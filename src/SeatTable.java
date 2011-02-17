@@ -30,7 +30,8 @@ public class SeatTable {
 	 */
 	int search(String name) {
 		for (int i = 0; i < maxSize; i++) {
-			if (seats[i].equals(name)) return i;
+			if (!emptySeat(seats[i]) && seats[i].equals(name))
+				return i;
 		}
 		return -1;
 	}
