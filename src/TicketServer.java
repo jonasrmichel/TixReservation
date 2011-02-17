@@ -7,6 +7,27 @@ public class TicketServer {
 
 	public TicketServer() {
 		table = new SeatTable();
+		Symbols.initServerList();
+	}
+
+	static ServerSocket getUnusedPort() throws Exception {
+		ServerSocket socket = null;
+		int tryPort = 0;
+		for (int i = 0; i < Symbols.serverList.size(); i++) {
+			try {
+				tryPort = Symbols.serverList.get(i);
+				System.out.print("Trying port " + tryPort + "...");
+				socket = new ServerSocket(tryPort);
+				System.out.println("SUCCESS");
+				return socket;
+			} catch (Exception e) {
+				System.out.println("IN USE");
+				if (i == Symbols.serverList.size() - 1) {
+					throw new Exception("Max servers reached");
+				}
+			}
+		}
+		return socket;
 	}
 
 	void handleClient(Socket theClient) {
@@ -39,9 +60,9 @@ public class TicketServer {
 	}
 
 	public static void main(String[] args) {
-		TicketServer tixServer = new TicketServer();
 		try {
-			ServerSocket listner = new ServerSocket(Symbols.serverPort);
+			TicketServer tixServer = new TicketServer();
+			ServerSocket listner = getUnusedPort();
 			while(true) {
 				Socket aClient = listner.accept();
 				tixServer.handleClient(aClient);
