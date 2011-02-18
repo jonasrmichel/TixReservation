@@ -1,0 +1,5 @@
+[ ] determine server - server comm. method
+[ ] implement lamport clocks
+[ ] send / receive protocol
+[ ] implement lamport mutex on TicketTable
+[ ] server - server (re)synchronization
