@@ -4,6 +4,7 @@ import java.util.*;
 
 public class TicketServer {
 	SeatTable table;
+	static int myID;
 
 	public TicketServer() {
 		table = new SeatTable();
@@ -37,23 +38,28 @@ public class TicketServer {
 			PrintWriter pout = new PrintWriter(theClient.getOutputStream());
 			String getline = din.readLine();
 			StringTokenizer st = new StringTokenizer(getline);
+
 			String tag = st.nextToken();
 
-			// handle client request
-			String name = st.nextToken();
+			if (tag.equals(Symbols.clientTag)) { // handle client request
+				String rmi = st.nextToken();
+				String name = st.nextToken();
 
-			System.out.println("Request: " + tag + " " + name);
+				System.out.println("Request: " + rmi + " " + name);
 
-			int index = -3; // initialize to unused val
-			if (tag.equals("reserve")) {
-				index = table.reserve(name);
-			} else if (tag.equals("search")) {
-				index = table.search(name);
-			} else if (tag.equals("delete")) {
-				index = table.delete(name);
+				int index = -3; // initialize to unused val
+				if (rmi.equals("reserve")) {
+					index = table.reserve(name);
+				} else if (rmi.equals("search")) {
+					index = table.search(name);
+				} else if (rmi.equals("delete")) {
+					index = table.delete(name);
+				}
+				pout.println(index);
+				pout.flush();
+			} else if (tag.equals(Symbols.serverTag)) { // handle server request
+
 			}
-			pout.println(index);
-			pout.flush();
 		} catch (Exception e) {
 			System.err.println(e);
 		}
@@ -63,6 +69,7 @@ public class TicketServer {
 		try {
 			TicketServer tixServer = new TicketServer();
 			ServerSocket listner = getUnusedPort();
+			myID = listner.getLocalPort();
 			while(true) {
 				Socket aClient = listner.accept();
 				tixServer.handleClient(aClient);

@@ -16,22 +16,19 @@ public class TicketClient {
 
 	public int reserveName(String name) throws IOException {
 		getSocket();
-		pout.println("reserve " + name);
-		pout.flush();
+		Symbols.sendToServer(pout, Symbols.clientTag, "reserve", name);
 		return Integer.parseInt(din.readLine());
 	}
 
 	public int searchName(String name) throws IOException {
 		getSocket();
-		pout.println("search " + name);
-		pout.flush();
+		Symbols.sendToServer(pout, Symbols.clientTag, "search", name);
 		return Integer.parseInt(din.readLine());
 	}
 
 	public int deleteName(String name) throws IOException {
 		getSocket();
-		pout.println("delete " + name);
-		pout.flush();
+		Symbols.sendToServer(pout, Symbols.clientTag, "delete", name);
 		return Integer.parseInt(din.readLine());
 	}
 
