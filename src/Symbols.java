@@ -15,11 +15,4 @@ public class Symbols {
 			serverList.add(basePort + i);
 		}
 	}
-
-	static boolean sendToServer(PrintStream ps, String tag, String rmi, String param) {
-		ps.println(tag + " " + rmi + " " + param);
-		ps.flush();
-		return true;
-	}
-
 }
