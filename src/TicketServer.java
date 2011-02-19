@@ -5,25 +5,28 @@ import java.util.*;
 public class TicketServer {
 	SeatTable table;
 	static int myID;
+	int myClock;
+	// TODO: lamport mutex "queue" data structure (e.g., hashmap?)
 
 	public TicketServer() {
+		myClock = 0;
 		table = new SeatTable();
-		Symbols.initServerList();
+		Symbols.initServerLists();
 	}
 
-	static ServerSocket getUnusedPort() throws Exception {
+	static ServerSocket getUnusedPort(List<Integer> portList) throws Exception {
 		ServerSocket socket = null;
 		int tryPort = 0;
-		for (int i = 0; i < Symbols.serverList.size(); i++) {
+		for (int i = 0; i < portList.size(); i++) {
 			try {
-				tryPort = Symbols.serverList.get(i);
+				tryPort = portList.get(i);
 				System.out.print("Trying port " + tryPort + "...");
 				socket = new ServerSocket(tryPort);
 				System.out.println("SUCCESS");
 				return socket;
 			} catch (Exception e) {
 				System.out.println("IN USE");
-				if (i == Symbols.serverList.size() - 1) {
+				if (i == portList.size() - 1) {
 					throw new Exception("Max servers reached");
 				}
 			}
@@ -65,13 +68,15 @@ public class TicketServer {
 		}
 	}
 
+	// TODO: class Listener implements Runnable
+
 	public static void main(String[] args) {
 		try {
 			TicketServer tixServer = new TicketServer();
-			ServerSocket listner = getUnusedPort();
-			myID = listner.getLocalPort();
+			ServerSocket listener = getUnusedPort(Symbols.serverList_Public);
+			myID = listener.getLocalPort();
 			while(true) {
-				Socket aClient = listner.accept();
+				Socket aClient = listener.accept();
 				tixServer.handleClient(aClient);
 				aClient.close();
 			}
