@@ -9,6 +9,7 @@ public class TicketClient {
 	PrintStream pout;
 
 	public void getSocket() throws IOException {
+		// TODO: choose random server until successful
 		Socket server = new Socket(Symbols.ticketServer, Symbols.serverPort);
 		din = new BufferedReader(
 				new InputStreamReader(server.getInputStream()));

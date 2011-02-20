@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -88,7 +89,7 @@ public class TicketServer {
 			System.err.println("Server aborted: " + e);
 		}
 	}
-	
+
 	private void releaseMutex(String command, String name) {
 		for (Socket s : otherActiveServers) {
 			try {
@@ -158,8 +159,6 @@ public class TicketServer {
 			try {
 				BufferedReader din = new BufferedReader(new InputStreamReader(
 						clientSocket.getInputStream()));
-				PrintWriter pout = new PrintWriter(
-						clientSocket.getOutputStream());
 				String getline = din.readLine();
 				StringTokenizer st = new StringTokenizer(getline);
 
@@ -171,15 +170,15 @@ public class TicketServer {
 					requests.add(new Request(theirID, theirClock));
 					for (Socket s : otherActiveServers) {
 						try {
-							PrintWriter pout2 = new PrintWriter(s.getOutputStream());
-							pout2.println("ack " + myClock);
-							pout2.flush();
+							PrintWriter pout = new PrintWriter(s.getOutputStream());
+							pout.println("ack " + myClock);
+							pout.flush();
 						} catch (IOException e) {
 							// Server is dead.
 							otherActiveServers.remove(s);
 						}
 					}
-					++myClock[myID];
+					//++myClock[myID];
 				} else if (rmi.equals("rel")) { // received a release
 					String mod = st.nextToken(); // reserve, delete
 					String name = st.nextToken();
@@ -192,7 +191,13 @@ public class TicketServer {
 						seatTable_.delete(name);
 					}
 				} else if (rmi.equals("hey")) { // new server
-					// TODO: update otherActiveServers
+					Socket theirSocket = new Socket(Symbols.ticketServer, theirID + Symbols.basePort_Private);
+					otherActiveServers.add(theirSocket);
+					PrintStream ps = new PrintStream(theirSocket.getOutputStream());
+					ps.println("ack " + myClock[myID]);
+					ps.flush();
+				} else if (rmi.equals("gst")) {
+
 				}
 				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
 				myClock[theirID] = Math.max(myClock[theirID], theirClock);
