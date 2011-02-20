@@ -6,6 +6,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.PriorityQueue;
 import java.util.StringTokenizer;
 
 public class TicketServer {
@@ -14,6 +15,7 @@ public class TicketServer {
 	volatile long[] myClock = new long[Symbols.maxServers];
 	volatile boolean wantMutex;
 	static List<Socket> otherActiveServers = new ArrayList<Socket>();
+	volatile PriorityQueue<Request> requests = new PriorityQueue<Request>();
 
 	// TODO: lamport mutex "queue" data structure (e.g., hashmap?)
 
@@ -102,14 +104,27 @@ public class TicketServer {
 				StringTokenizer st = new StringTokenizer(getline);
 
 				String rmi = st.nextToken(); // req, rel
-				long newClock = Long.parseLong(st.nextToken()); // clock val
+				long theirClock = Long.parseLong(st.nextToken()); // clock val
+				int theirID = clientSocket.getPort()-Symbols.basePort_Private;
 
 				if (rmi.equals("req")) { // received a request
-
-
+					requests.add(new Request(theirID, theirClock));
+					for (Socket s : otherActiveServers) {
+						try {
+							PrintWriter pout2 = new PrintWriter(s.getOutputStream());
+							pout2.println("ack " + myClock);
+							pout2.flush();
+						} catch (IOException e) {
+							// Server is dead.
+							otherActiveServers.remove(s);
+						}
+					}
+					++myClock[myID];
 				} else if (rmi.equals("rel")) { // received a release
 					String mod = st.nextToken(); // reserve, delete
 					String name = st.nextToken();
+
+					requests.remove();
 
 					if (mod.equals("res")) {
 						seatTable_.reserve(name);
@@ -117,9 +132,10 @@ public class TicketServer {
 						seatTable_.delete(name);
 					}
 				} else if (rmi.equals("hey")) { // new server
-
+					// TODO: update otherActiveServers
 				}
-				// TODO: update clock vector
+				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
+				myClock[theirID] = Math.max(myClock[theirID], theirClock);
 			} catch (Exception e) {
 				System.err.println(e);
 			}
