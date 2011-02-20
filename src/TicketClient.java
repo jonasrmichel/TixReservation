@@ -15,27 +15,27 @@ public class TicketClient {
 		pout = new PrintStream(server.getOutputStream());
 	}
 
-	static boolean sendToServer(PrintStream ps, String tag, String rmi, String param) {
-		ps.println(tag + " " + rmi + " " + param);
+	static boolean sendToServer(PrintStream ps, String rmi, String param) {
+		ps.println(rmi + " " + param);
 		ps.flush();
 		return true;
 	}
 
 	public int reserveName(String name) throws IOException {
 		getSocket();
-		sendToServer(pout, Symbols.clientTag, "reserve", name);
+		sendToServer(pout, "reserve", name);
 		return Integer.parseInt(din.readLine());
 	}
 
 	public int searchName(String name) throws IOException {
 		getSocket();
-		sendToServer(pout, Symbols.clientTag, "search", name);
+		sendToServer(pout, "search", name);
 		return Integer.parseInt(din.readLine());
 	}
 
 	public int deleteName(String name) throws IOException {
 		getSocket();
-		sendToServer(pout, Symbols.clientTag, "delete", name);
+		sendToServer(pout, "delete", name);
 		return Integer.parseInt(din.readLine());
 	}
 
