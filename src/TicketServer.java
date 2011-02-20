@@ -1,11 +1,12 @@
-import java.net.*;
-import java.io.*;
-import java.util.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.util.List;
 
 public class TicketServer {
 	SeatTable table;
 	static int myID;
 	int myClock;
+
 	// TODO: lamport mutex "queue" data structure (e.g., hashmap?)
 
 	public TicketServer() {
@@ -34,52 +35,19 @@ public class TicketServer {
 		return socket;
 	}
 
-	void handleClient(Socket theClient) {
-		try {
-			BufferedReader din = new BufferedReader
-				(new InputStreamReader(theClient.getInputStream()));
-			PrintWriter pout = new PrintWriter(theClient.getOutputStream());
-			String getline = din.readLine();
-			StringTokenizer st = new StringTokenizer(getline);
-
-			String tag = st.nextToken();
-
-			if (tag.equals(Symbols.clientTag)) { // handle client request
-				String rmi = st.nextToken();
-				String name = st.nextToken();
-
-				System.out.println("Request: " + rmi + " " + name);
-
-				int index = -3; // initialize to unused val
-				if (rmi.equals("reserve")) {
-					index = table.reserve(name);
-				} else if (rmi.equals("search")) {
-					index = table.search(name);
-				} else if (rmi.equals("delete")) {
-					index = table.delete(name);
-				}
-				pout.println(index);
-				pout.flush();
-			} else if (tag.equals(Symbols.serverTag)) { // handle server request
-
-			}
-		} catch (Exception e) {
-			System.err.println(e);
-		}
-	}
-
-	// TODO: class Listener implements Runnable
-
 	public static void main(String[] args) {
 		try {
 			TicketServer tixServer = new TicketServer();
 			ServerSocket listener = getUnusedPort(Symbols.serverList_Public);
 			myID = listener.getLocalPort();
-			while(true) {
-				Socket aClient = listener.accept();
-				tixServer.handleClient(aClient);
-				aClient.close();
+			new Thread(new ClientHandlerRunner(listener, tixServer.table))
+					.start();
+			ServerSocket serverListener = getUnusedPort(Symbols.serverList_Private);
+			while (true) {
+				Socket anotherServer = serverListener.accept();
+				// Do some stuff with it.
 			}
+
 		} catch (Exception e) {
 			System.err.println("Server aborted: " + e);
 		}
