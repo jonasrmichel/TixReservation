@@ -1,11 +1,14 @@
+import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.List;
 
 public class TicketServer {
 	SeatTable table;
 	static int myID;
 	int myClock;
+	static List<Socket> otherActiveServers = new ArrayList<Socket>();
 
 	// TODO: lamport mutex "queue" data structure (e.g., hashmap?)
 
@@ -43,6 +46,18 @@ public class TicketServer {
 			new Thread(new ClientHandlerRunner(listener, tixServer.table))
 					.start();
 			ServerSocket serverListener = getUnusedPort(Symbols.serverList_Private);
+			for (int i : Symbols.serverList_Private) {
+				if (i == serverListener.getLocalPort())
+					continue;
+
+				try {
+					Socket server = new Socket(Symbols.ticketServer, i);
+					otherActiveServers.add(server);
+				} catch (IOException ex) {
+					// Server is not up... ignore.
+				}
+			}
+
 			while (true) {
 				Socket anotherServer = serverListener.accept();
 				// Do some stuff with it.

@@ -36,11 +36,15 @@ public class ClientHandlerRunner implements Runnable {
 				int index = -3; // initialize to unused val
 				// TODO: mutex
 				if (rmi.equals("reserve")) {
+					getMutex();
 					index = seatTable_.reserve(name);
+					releaseMutex();
 				} else if (rmi.equals("search")) {
 					index = seatTable_.search(name);
 				} else if (rmi.equals("delete")) {
+					getMutex();
 					index = seatTable_.delete(name);
+					releaseMutex();
 				}
 				pout.println(index);
 				pout.flush();
@@ -48,6 +52,16 @@ public class ClientHandlerRunner implements Runnable {
 		} catch (Exception e) {
 			System.err.println(e);
 		}
+	}
+
+	private void releaseMutex() {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private void getMutex() {
+		// TODO Auto-generated method stub
+		
 	}
 
 }
