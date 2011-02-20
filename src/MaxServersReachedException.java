@@ -1,4 +1,5 @@
 
+@SuppressWarnings("serial")
 public class MaxServersReachedException extends Exception {
 
 	public MaxServersReachedException(String string) {

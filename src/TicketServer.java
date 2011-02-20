@@ -1,6 +1,7 @@
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.PrintStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -50,31 +51,41 @@ public class TicketServer {
 	public void doStuff() throws MaxServersReachedException {
 		ServerSocket listener = getUnusedPort(Symbols.serverList_Public);
 		ServerSocket serverListener = getUnusedPort(Symbols.serverList_Private);
-		myID = serverListener.getLocalPort()-Symbols.basePort_Private;
+		myID = serverListener.getLocalPort() - Symbols.basePort_Private;
 		myClock[myID] = 1;
 		for (int i : Symbols.serverList_Private) {
 			if (i == serverListener.getLocalPort())
 				continue;
 			try {
 				Socket server = new Socket(Symbols.ticketServer, i);
+				PrintStream pout = new PrintStream(server.getOutputStream());
+				pout.println("hey " + 1 + " " + myID);
+				server.setSoTimeout(3000);
+				BufferedReader br = new BufferedReader(new InputStreamReader(
+						server.getInputStream()));
+				String line = br.readLine();
+				StringTokenizer st = new StringTokenizer(line);
+				String rmi = st.nextToken(); // should be ack
+				long theirClock = Long.parseLong(st.nextToken()); // clock val
+				int theirID = i - Symbols.basePort_Private;
+				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
+				myClock[theirID] = Math.max(myClock[theirID], theirClock);
 				otherActiveServers.add(server);
-				// Send this guy a hey
 			} catch (IOException ex) {
 				// Server is not up... ignore.
 			}
 		}
 		if (!otherActiveServers.isEmpty()) {
 			getMutex();
-			// Ask somebody for the seattable;
+			// Get new seattable.
 			releaseMutex("null", "");
 		}
 		new Thread(new ClientHandlerRunner(listener)).start();
-		while(true) {
+		while (true) {
 			try {
 				Socket anotherServer = serverListener.accept();
-				new Thread(new ServerHandlerRunner(anotherServer))
-					.start();
-			} catch (IOException ex){
+				new Thread(new ServerHandlerRunner(anotherServer)).start();
+			} catch (IOException ex) {
 				System.err.println(ex);
 			}
 		}
@@ -88,7 +99,7 @@ public class TicketServer {
 			System.err.println("Server aborted: " + e);
 		}
 	}
-	
+
 	private void releaseMutex(String command, String name) {
 		for (Socket s : otherActiveServers) {
 			try {
@@ -119,8 +130,8 @@ public class TicketServer {
 		++myClock[myID];
 		for (Socket s : otherActiveServers) {
 			try {
-				BufferedReader din = new BufferedReader(
-						new InputStreamReader(s.getInputStream()));
+				BufferedReader din = new BufferedReader(new InputStreamReader(
+						s.getInputStream()));
 				String ok = din.readLine();
 
 				StringTokenizer st = new StringTokenizer(ok);
@@ -128,14 +139,15 @@ public class TicketServer {
 				assert token.equals("ack");
 				token = st.nextToken();
 				myClock[myID] = Math.max(myClock[myID], Long.parseLong(token)) + 1;
-				int theirID = s.getPort()-Symbols.basePort_Private;
-				myClock[theirID] = Math.max(myClock[theirID], Long.parseLong(token));
+				int theirID = s.getPort() - Symbols.basePort_Private;
+				myClock[theirID] = Math.max(myClock[theirID],
+						Long.parseLong(token));
 			} catch (IOException e) {
 				// Server is dead.
 				otherActiveServers.remove(s);
 			}
 		}
-		while (requests.peek().id_!=myID) {
+		while (requests.peek().id_ != myID) {
 			try {
 				requests.wait();
 			} catch (InterruptedException e) {
@@ -158,22 +170,21 @@ public class TicketServer {
 			try {
 				BufferedReader din = new BufferedReader(new InputStreamReader(
 						clientSocket.getInputStream()));
-				PrintWriter pout = new PrintWriter(
-						clientSocket.getOutputStream());
 				String getline = din.readLine();
 				StringTokenizer st = new StringTokenizer(getline);
 
 				String rmi = st.nextToken(); // req, rel
 				long theirClock = Long.parseLong(st.nextToken()); // clock val
-				int theirID = clientSocket.getPort()-Symbols.basePort_Private;
+				int theirID = clientSocket.getPort() - Symbols.basePort_Private;
 
 				if (rmi.equals("req")) { // received a request
 					requests.add(new Request(theirID, theirClock));
 					for (Socket s : otherActiveServers) {
 						try {
-							PrintWriter pout2 = new PrintWriter(s.getOutputStream());
-							pout2.println("ack " + myClock);
-							pout2.flush();
+							PrintWriter pout = new PrintWriter(
+									s.getOutputStream());
+							pout.println("ack " + myClock);
+							pout.flush();
 						} catch (IOException e) {
 							// Server is dead.
 							otherActiveServers.remove(s);
@@ -253,7 +264,6 @@ public class TicketServer {
 				System.err.println(e);
 			}
 		}
-
 
 	}
 }
