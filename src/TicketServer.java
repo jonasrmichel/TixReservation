@@ -13,7 +13,6 @@ public class TicketServer {
 	SeatTable seatTable_;
 	static int myID;
 	volatile long[] myClock = new long[Symbols.maxServers];
-	volatile boolean wantMutex;
 	static List<Socket> otherActiveServers = new ArrayList<Socket>();
 	volatile PriorityQueue<Request> requests = new PriorityQueue<Request>();
 
@@ -91,7 +90,6 @@ public class TicketServer {
 	}
 	
 	private void releaseMutex(String command, String name) {
-		wantMutex = false;
 		for (Socket s : otherActiveServers) {
 			try {
 				PrintWriter pout = new PrintWriter(s.getOutputStream());
@@ -103,10 +101,10 @@ public class TicketServer {
 			}
 		}
 		++myClock[myID];
+		requests.notifyAll();
 	}
 
 	private void getMutex() {
-		wantMutex = true;
 		for (Socket s : otherActiveServers) {
 			try {
 				PrintWriter pout = new PrintWriter(s.getOutputStream());
@@ -117,6 +115,7 @@ public class TicketServer {
 				otherActiveServers.remove(s);
 			}
 		}
+		requests.add(new Request(myID, myClock[myID]));
 		++myClock[myID];
 		for (Socket s : otherActiveServers) {
 			try {
@@ -136,7 +135,14 @@ public class TicketServer {
 				otherActiveServers.remove(s);
 			}
 		}
-		// TODO: Make sure we're at head of queue.
+		while (requests.peek().id_!=myID) {
+			try {
+				requests.wait();
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 
 	public class ServerHandlerRunner implements Runnable {
