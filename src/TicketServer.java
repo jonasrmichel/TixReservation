@@ -190,7 +190,7 @@ public class TicketServer {
 							otherActiveServers.remove(s);
 						}
 					}
-					++myClock[myID];
+					// ++myClock[myID];
 				} else if (rmi.equals("rel")) { // received a release
 					String mod = st.nextToken(); // reserve, delete
 					String name = st.nextToken();
@@ -203,7 +203,15 @@ public class TicketServer {
 						seatTable_.delete(name);
 					}
 				} else if (rmi.equals("hey")) { // new server
-					// TODO: update otherActiveServers
+					Socket theirSocket = new Socket(Symbols.ticketServer,
+							theirID + Symbols.basePort_Private);
+					otherActiveServers.add(theirSocket);
+					PrintStream ps = new PrintStream(
+							theirSocket.getOutputStream());
+					ps.println("ack " + myClock[myID]);
+					ps.flush();
+				} else if (rmi.equals("gst")) {
+
 				}
 				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
 				myClock[theirID] = Math.max(myClock[theirID], theirClock);
