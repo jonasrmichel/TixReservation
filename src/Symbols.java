@@ -4,8 +4,6 @@ import java.util.List;
 public class Symbols {
 	final static int serverPort = 1234;
 	final static String ticketServer = "localhost";
-	final static String serverTag = "server";
-	final static String clientTag = "client";
 	static List<Integer> serverList_Public = new ArrayList<Integer>();
 	static List<Integer> serverList_Private = new ArrayList<Integer>();
 	final static int basePort_Public = 1234;

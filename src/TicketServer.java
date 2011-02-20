@@ -13,7 +13,6 @@ public class TicketServer {
 	static int myID;
 	volatile long[] myClock = new long[Symbols.maxServers];
 	volatile boolean wantMutex;
-
 	static List<Socket> otherActiveServers = new ArrayList<Socket>();
 
 	// TODO: lamport mutex "queue" data structure (e.g., hashmap?)
@@ -64,17 +63,15 @@ public class TicketServer {
 				// Server is not up... ignore.
 			}
 		}
-
-		while (true) {
+		while(true) {
 			try {
 				Socket anotherServer = serverListener.accept();
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				new Thread(new ServerHandlerRunner(anotherServer))
+					.start();
+			} catch (IOException ex){
+				System.err.println(ex);
 			}
-			// Do some stuff with it.
 		}
-
 	}
 
 	public static void main(String[] args) {
@@ -83,6 +80,49 @@ public class TicketServer {
 			tixServer.doStuff();
 		} catch (MaxServersReachedException e) {
 			System.err.println("Server aborted: " + e);
+		}
+	}
+
+	public class ServerHandlerRunner implements Runnable {
+
+		protected Socket clientSocket = null;
+
+		public ServerHandlerRunner(Socket serverSocket) {
+			this.clientSocket = serverSocket;
+		}
+
+		@Override
+		public void run() {
+			try {
+				BufferedReader din = new BufferedReader(new InputStreamReader(
+						clientSocket.getInputStream()));
+				PrintWriter pout = new PrintWriter(
+						clientSocket.getOutputStream());
+				String getline = din.readLine();
+				StringTokenizer st = new StringTokenizer(getline);
+
+				String rmi = st.nextToken(); // req, rel
+				long newClock = Long.parseLong(st.nextToken()); // clock val
+
+				if (rmi.equals("req")) { // received a request
+
+
+				} else if (rmi.equals("rel")) { // received a release
+					String mod = st.nextToken(); // reserve, delete
+					String name = st.nextToken();
+
+					if (mod.equals("res")) {
+						seatTable_.reserve(name);
+					} else if (mod.equals("del")) {
+						seatTable_.delete(name);
+					}
+				} else if (rmi.equals("hey")) { // new server
+
+				}
+				// TODO: update clock vector
+			} catch (Exception e) {
+				System.err.println(e);
+			}
 		}
 	}
 
