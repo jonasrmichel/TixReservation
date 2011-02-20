@@ -11,9 +11,11 @@ public class Symbols {
 	final static int maxServers = 5;
 
 	static void initServerLists() {
-		for (int i = 0; i < maxServers; i++) {
-			serverList_Public.add(basePort_Public + i);
-			serverList_Private.add(basePort_Private + i);
+		if (serverList_Private.isEmpty()) {
+			for (int i = 0; i < maxServers; i++) {
+				serverList_Public.add(basePort_Public + i);
+				serverList_Private.add(basePort_Private + i);
+			}
 		}
 	}
 }

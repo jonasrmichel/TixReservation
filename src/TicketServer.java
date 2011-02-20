@@ -51,18 +51,23 @@ public class TicketServer {
 		ServerSocket serverListener = getUnusedPort(Symbols.serverList_Private);
 		myID = serverListener.getLocalPort()-Symbols.basePort_Private;
 		myClock[myID] = 1;
-		new Thread(new ClientHandlerRunner(listener)).start();
 		for (int i : Symbols.serverList_Private) {
 			if (i == serverListener.getLocalPort())
 				continue;
-
 			try {
 				Socket server = new Socket(Symbols.ticketServer, i);
 				otherActiveServers.add(server);
+				// Send this guy a hey
 			} catch (IOException ex) {
 				// Server is not up... ignore.
 			}
 		}
+		if (!otherActiveServers.isEmpty()) {
+			getMutex();
+			// Ask somebody for the seattable;
+			releaseMutex("null", "");
+		}
+		new Thread(new ClientHandlerRunner(listener)).start();
 		while(true) {
 			try {
 				Socket anotherServer = serverListener.accept();
@@ -81,6 +86,55 @@ public class TicketServer {
 		} catch (MaxServersReachedException e) {
 			System.err.println("Server aborted: " + e);
 		}
+	}
+	
+	private void releaseMutex(String command, String name) {
+		wantMutex = false;
+		for (Socket s : otherActiveServers) {
+			try {
+				PrintWriter pout = new PrintWriter(s.getOutputStream());
+				pout.println("rel " + myClock + " " + command + " " + name);
+				pout.flush();
+			} catch (IOException e) {
+				// Server is dead.
+				otherActiveServers.remove(s);
+			}
+		}
+		++myClock[myID];
+	}
+
+	private void getMutex() {
+		wantMutex = true;
+		for (Socket s : otherActiveServers) {
+			try {
+				PrintWriter pout = new PrintWriter(s.getOutputStream());
+				pout.println("req " + myClock);
+				pout.flush();
+			} catch (IOException e) {
+				// Server is dead.
+				otherActiveServers.remove(s);
+			}
+		}
+		++myClock[myID];
+		for (Socket s : otherActiveServers) {
+			try {
+				BufferedReader din = new BufferedReader(
+						new InputStreamReader(s.getInputStream()));
+				String ok = din.readLine();
+
+				StringTokenizer st = new StringTokenizer(ok);
+				String token = st.nextToken();
+				assert token.equals("ack");
+				token = st.nextToken();
+				myClock[myID] = Math.max(myClock[myID], Long.parseLong(token)) + 1;
+				int theirID = s.getPort()-Symbols.basePort_Private;
+				myClock[theirID] = Math.max(myClock[theirID], Long.parseLong(token));
+			} catch (IOException e) {
+				// Server is dead.
+				otherActiveServers.remove(s);
+			}
+		}
+		// TODO: Make sure we're at head of queue.
 	}
 
 	public class ServerHandlerRunner implements Runnable {
@@ -178,52 +232,6 @@ public class TicketServer {
 			}
 		}
 
-		private void releaseMutex(String command, String name) {
-			wantMutex = false;
-			for (Socket s : otherActiveServers) {
-				try {
-					PrintWriter pout = new PrintWriter(s.getOutputStream());
-					pout.println("rel " + myClock + " " + command + " " + name);
-					pout.flush();
-				} catch (IOException e) {
-					// Server is dead.
-					otherActiveServers.remove(s);
-				}
-			}
-			++myClock[myID];
-		}
 
-		private void getMutex() {
-			wantMutex = true;
-			for (Socket s : otherActiveServers) {
-				try {
-					PrintWriter pout = new PrintWriter(s.getOutputStream());
-					pout.println("req " + myClock);
-					pout.flush();
-				} catch (IOException e) {
-					// Server is dead.
-					otherActiveServers.remove(s);
-				}
-			}
-			++myClock[myID];
-			for (Socket s : otherActiveServers) {
-				try {
-					BufferedReader din = new BufferedReader(
-							new InputStreamReader(s.getInputStream()));
-					String ok = din.readLine();
-
-					StringTokenizer st = new StringTokenizer(ok);
-					String token = st.nextToken();
-					assert token.equals("ack");
-					token = st.nextToken();
-					myClock[myID] = Math.max(myClock[myID], Long.parseLong(token)) + 1;
-					int theirID = s.getPort()-Symbols.basePort_Private;
-					myClock[theirID] = Math.max(myClock[theirID], Long.parseLong(token));
-				} catch (IOException e) {
-					// Server is dead.
-					otherActiveServers.remove(s);
-				}
-			}
-		}
 	}
 }
