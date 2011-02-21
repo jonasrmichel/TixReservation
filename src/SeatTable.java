@@ -15,7 +15,7 @@ public class SeatTable {
 	 * 		-1 reservation already exists for name
 	 * 		-2 list full
 	 */
-	int reserve(String name) {
+	synchronized int reserve(String name) {
 		if (search(name) == -1) {
 			int seatNum = bestSeat();
 			if (seatNum != -2) {
@@ -48,7 +48,7 @@ public class SeatTable {
 	 * @return seat number freed
 	 * 		-1 name not found
 	 */
-	int delete(String name) {
+	synchronized int delete(String name) {
 		int seatNum = search(name);
 		if (seatNum != -1) {
 			seats[seatNum] = null;
