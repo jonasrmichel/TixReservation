@@ -11,7 +11,6 @@ import java.util.PriorityQueue;
 import java.util.StringTokenizer;
 
 public class TicketServer {
-	private static final int TIMEOUT_ = 3000;
 	SeatTable seatTable_;
 	static int myID;
 	volatile long[] myClock = new long[Symbols.maxServers];
@@ -56,7 +55,7 @@ public class TicketServer {
 				PrintStream pout = new PrintStream(server.getOutputStream());
 				pout.println("hey " + 1 + " " + myID);
 				pout.flush();
-				server.setSoTimeout(TIMEOUT_);
+				server.setSoTimeout(Symbols.TIMEOUT_);
 				BufferedReader br = new BufferedReader(new InputStreamReader(
 						server.getInputStream()));
 				String line = br.readLine();
@@ -134,7 +133,9 @@ public class TicketServer {
 			}
 		}
 		++myClock[myID];
-		requests.notifyAll();
+		synchronized (requests) {
+			requests.notifyAll();
+		}
 	}
 
 	private void getMutex() {
@@ -220,12 +221,13 @@ public class TicketServer {
 				} else if (rmi.equals("hey")) { // new server
 					Socket theirSocket = new Socket(Symbols.ticketServer,
 							theirID + Symbols.basePort_Private);
-					theirSocket.setSoTimeout(TIMEOUT_);
+					theirSocket.setSoTimeout(Symbols.TIMEOUT_);
 					otherActiveServers.add(theirSocket);
 					pout.println("ack " + myClock[myID]);
 					pout.flush();
 				} else if (rmi.equals("gst")) {
-					pout.println("rdy " + myClock[myID] + " " + seatTable_.getCount());
+					pout.println("rdy " + myClock[myID] + " "
+							+ seatTable_.getCount());
 					pout.flush();
 					for (int i = 0; i < seatTable_.maxSize; ++i) {
 						if (seatTable_.emptySeat(seatTable_.seats[i]))

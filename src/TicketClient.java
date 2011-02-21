@@ -18,7 +18,7 @@ public class TicketClient {
 				System.out.println("SUCCESS");
 				return server;
 			} catch (IOException e) {
-				System.out.println("IN USE");
+				System.out.println("NOT LISTENING");
 			}
 		}
 	}
