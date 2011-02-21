@@ -104,7 +104,7 @@ public class TicketServer {
 				// This shouldn't happen?
 				assert false;
 			}
-			releaseMutex("null", "");
+			releaseMutex("null", "null");
 
 		}
 		new Thread(new ClientHandlerRunner(listener)).start();
@@ -247,11 +247,14 @@ public class TicketServer {
 					pout.println("rdy " + myID + " " + myClock[myID] + " "
 							+ seatTable_.getCount());
 					pout.flush();
-					for (int i = 0; i < seatTable_.maxSize; ++i) {
+					int sent = 0;
+					for (int i = 0; i < seatTable_.maxSize
+							&& sent < seatTable_.getCount(); ++i) {
 						if (seatTable_.emptySeat(seatTable_.seats[i]))
 							continue;
 						pout.println(i + " " + seatTable_.seats[i]);
 						pout.flush();
+						++sent;
 					}
 				}
 				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
@@ -293,7 +296,7 @@ public class TicketServer {
 						getMutex();
 						index = seatTable_.reserve(name);
 						if (index < 0)
-							releaseMutex("null", "");
+							releaseMutex("null", "null");
 						else
 							releaseMutex("res", name);
 					} else if (rmi.equals("search")) {
@@ -302,7 +305,7 @@ public class TicketServer {
 						getMutex();
 						index = seatTable_.delete(name);
 						if (index < 0)
-							releaseMutex("null", "");
+							releaseMutex("null", "null");
 						else
 							releaseMutex("del", name);
 					}
