@@ -11,13 +11,12 @@ import java.util.PriorityQueue;
 import java.util.StringTokenizer;
 
 public class TicketServer {
+	private static final int TIMEOUT_ = 3000;
 	SeatTable seatTable_;
 	static int myID;
 	volatile long[] myClock = new long[Symbols.maxServers];
 	static List<Socket> otherActiveServers = new ArrayList<Socket>();
 	volatile PriorityQueue<Request> requests = new PriorityQueue<Request>();
-
-	// TODO: lamport mutex "queue" data structure (e.g., hashmap?)
 
 	public TicketServer() {
 		seatTable_ = new SeatTable();
@@ -29,23 +28,19 @@ public class TicketServer {
 
 	static ServerSocket getUnusedPort(List<Integer> portList)
 			throws MaxServersReachedException {
-		ServerSocket socket = null;
-		int tryPort = 0;
 		for (int i = 0; i < portList.size(); i++) {
 			try {
-				tryPort = portList.get(i);
+				int tryPort = portList.get(i);
 				System.out.print("Trying port " + tryPort + "...");
-				socket = new ServerSocket(tryPort);
+				ServerSocket socket = new ServerSocket(tryPort);
 				System.out.println("SUCCESS");
 				return socket;
-			} catch (Exception e) {
+			} catch (IOException e) {
 				System.out.println("IN USE");
-				if (i == portList.size() - 1) {
-					throw new MaxServersReachedException("Max servers reached");
-				}
 			}
 		}
-		return socket;
+		// Have tried all ports...
+		throw new MaxServersReachedException("Max servers reached");
 	}
 
 	public void doStuff() throws MaxServersReachedException {
@@ -60,7 +55,8 @@ public class TicketServer {
 				Socket server = new Socket(Symbols.ticketServer, i);
 				PrintStream pout = new PrintStream(server.getOutputStream());
 				pout.println("hey " + 1 + " " + myID);
-				server.setSoTimeout(3000);
+				pout.flush();
+				server.setSoTimeout(TIMEOUT_);
 				BufferedReader br = new BufferedReader(new InputStreamReader(
 						server.getInputStream()));
 				String line = br.readLine();
@@ -77,8 +73,34 @@ public class TicketServer {
 		}
 		if (!otherActiveServers.isEmpty()) {
 			getMutex();
-			// Get new seattable.
+			try {
+				Socket firstguy = otherActiveServers.get(0);
+				PrintStream pout = new PrintStream(firstguy.getOutputStream());
+				pout.println("gst " + myClock[myID]);
+				pout.flush();
+				BufferedReader br = new BufferedReader(new InputStreamReader(
+						firstguy.getInputStream()));
+				String line = br.readLine();
+				StringTokenizer st = new StringTokenizer(line);
+				String rmi = st.nextToken(); // should be rdy
+				long theirClock = Long.parseLong(st.nextToken()); // clock val
+				int theirID = firstguy.getPort() - Symbols.basePort_Private;
+				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
+				myClock[theirID] = Math.max(myClock[theirID], theirClock);
+				int numInTable = Integer.parseInt(st.nextToken());
+				for (int i = 0; i < numInTable; ++i) {
+					String seatEntry = br.readLine();
+					st = new StringTokenizer(seatEntry);
+					int seat = Integer.parseInt(st.nextToken());
+					String name = st.nextToken();
+					seatTable_.seats[seat] = name;
+				}
+			} catch (IOException ex) {
+				// This shouldn't happen?
+				assert false;
+			}
 			releaseMutex("null", "");
+
 		}
 		new Thread(new ClientHandlerRunner(listener)).start();
 		while (true) {
@@ -170,6 +192,9 @@ public class TicketServer {
 			try {
 				BufferedReader din = new BufferedReader(new InputStreamReader(
 						clientSocket.getInputStream()));
+				PrintWriter pout = new PrintWriter(
+						clientSocket.getOutputStream());
+
 				String getline = din.readLine();
 				StringTokenizer st = new StringTokenizer(getline);
 
@@ -179,18 +204,8 @@ public class TicketServer {
 
 				if (rmi.equals("req")) { // received a request
 					requests.add(new Request(theirID, theirClock));
-					for (Socket s : otherActiveServers) {
-						try {
-							PrintWriter pout = new PrintWriter(
-									s.getOutputStream());
-							pout.println("ack " + myClock);
-							pout.flush();
-						} catch (IOException e) {
-							// Server is dead.
-							otherActiveServers.remove(s);
-						}
-					}
-					// ++myClock[myID];
+					pout.println("ack " + myClock[myID]);
+					pout.flush();
 				} else if (rmi.equals("rel")) { // received a release
 					String mod = st.nextToken(); // reserve, delete
 					String name = st.nextToken();
@@ -205,13 +220,19 @@ public class TicketServer {
 				} else if (rmi.equals("hey")) { // new server
 					Socket theirSocket = new Socket(Symbols.ticketServer,
 							theirID + Symbols.basePort_Private);
+					theirSocket.setSoTimeout(TIMEOUT_);
 					otherActiveServers.add(theirSocket);
-					PrintStream ps = new PrintStream(
-							theirSocket.getOutputStream());
-					ps.println("ack " + myClock[myID]);
-					ps.flush();
+					pout.println("ack " + myClock[myID]);
+					pout.flush();
 				} else if (rmi.equals("gst")) {
-
+					pout.println("rdy " + myClock[myID] + " " + seatTable_.getCount());
+					pout.flush();
+					for (int i = 0; i < seatTable_.maxSize; ++i) {
+						if (seatTable_.emptySeat(seatTable_.seats[i]))
+							continue;
+						pout.println(i + " " + seatTable_.seats[i]);
+						pout.flush();
+					}
 				}
 				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
 				myClock[theirID] = Math.max(myClock[theirID], theirClock);

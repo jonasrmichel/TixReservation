@@ -1,7 +1,7 @@
 
 public class SeatTable {
 	final int maxSize = 100;
-	private String[] seats = new String[maxSize];
+	public String[] seats = new String[maxSize];
 
 	/**
 	 *
