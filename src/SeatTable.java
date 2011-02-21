@@ -2,6 +2,11 @@
 public class SeatTable {
 	final int maxSize = 100;
 	public String[] seats = new String[maxSize];
+	private int count = 0;
+
+	public int getCount() {
+		return count;
+	}
 
 	/**
 	 *
@@ -15,6 +20,7 @@ public class SeatTable {
 			int seatNum = bestSeat();
 			if (seatNum != -2) {
 				seats[seatNum] = name;
+				++count;
 			}
 			return seatNum;
 		} else {
@@ -46,6 +52,7 @@ public class SeatTable {
 		int seatNum = search(name);
 		if (seatNum != -1) {
 			seats[seatNum] = null;
+			--count;
 		}
 		return seatNum;
 	}
