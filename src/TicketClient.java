@@ -3,52 +3,54 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.PrintStream;
 import java.net.Socket;
+import java.util.List;
+import java.util.Random;
 
 public class TicketClient {
-	BufferedReader din;
-	PrintStream pout;
-
-	public void getSocket() throws IOException {
-		// TODO: choose random server until successful
-		Socket server = new Socket(Symbols.ticketServer, Symbols.serverPort);
-		din = new BufferedReader(
-				new InputStreamReader(server.getInputStream()));
-		pout = new PrintStream(server.getOutputStream());
-	}
-
-	static boolean sendToServer(PrintStream ps, String rmi, String param) {
-		ps.println(rmi + " " + param);
-		ps.flush();
-		return true;
-	}
-
-	public int reserveName(String name) throws IOException {
-		getSocket();
-		sendToServer(pout, "reserve", name);
-		return Integer.parseInt(din.readLine());
-	}
-
-	public int searchName(String name) throws IOException {
-		getSocket();
-		sendToServer(pout, "search", name);
-		return Integer.parseInt(din.readLine());
-	}
-
-	public int deleteName(String name) throws IOException {
-		getSocket();
-		sendToServer(pout, "delete", name);
-		return Integer.parseInt(din.readLine());
+	static Socket getRandomServerPort(List<Integer> portList)
+		throws MaxServersReachedException {
+		Random randy = new Random();
+		while (true) {
+			try {
+				int tryPort = portList.get(randy.nextInt(Symbols.maxServers));
+				System.out.print("Trying port " + tryPort + "...");
+				Socket server = new Socket(Symbols.ticketServer, tryPort);
+				System.out.println("SUCCESS");
+				return server;
+			} catch (IOException e) {
+				System.out.println("IN USE");
+			}
+		}
 	}
 
 	public static void main(String[] args) {
-		TicketClient myClient = new TicketClient();
-		try {
-			String aName = "Maximus";
-			System.out.println("reserve returned: " + myClient.reserveName(aName));
-			System.out.println("search returned: " + myClient.searchName(aName));
-			System.out.println("delete returned: " + myClient.deleteName(aName));
-		} catch (Exception e) {
-			System.err.println("Client aborted: " + e);
+		BufferedReader buf = new BufferedReader(new InputStreamReader(System.in));
+		String line = null;
+		Symbols.initServerLists();
+
+		while (true) {
+			try {
+				line = buf.readLine();
+			} catch (IOException e) {
+				// don't care
+			}
+			boolean succeed = false;
+			while(!succeed) {
+				try {
+					Socket server = getRandomServerPort(Symbols.serverList_Public);
+					server.setSoTimeout(Symbols.TIMEOUT_);
+					BufferedReader din = new BufferedReader(
+							new InputStreamReader(server.getInputStream()));
+					PrintStream pout = new PrintStream(server.getOutputStream());
+
+					pout.println(line);
+					pout.flush();
+					System.out.println(din.readLine());
+					succeed = true;
+				} catch (Exception e) {
+					System.err.println("Client aborted: " + e);
+				}
+			}
 		}
 	}
 }
