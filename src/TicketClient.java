@@ -7,9 +7,9 @@ import java.util.List;
 import java.util.Random;
 
 public class TicketClient {
-	static Socket getRandomServerPort(List<Integer> portList)
-		throws MaxServersReachedException {
-		Random randy = new Random();
+	static Random randy = new Random();
+
+	static Socket getRandomServerPort(List<Integer> portList) {
 		while (true) {
 			try {
 				int tryPort = portList.get(randy.nextInt(Symbols.maxServers));
@@ -24,7 +24,8 @@ public class TicketClient {
 	}
 
 	public static void main(String[] args) {
-		BufferedReader buf = new BufferedReader(new InputStreamReader(System.in));
+		BufferedReader buf = new BufferedReader(
+				new InputStreamReader(System.in));
 		String line = null;
 		String response;
 		Symbols.initServerLists();
@@ -37,7 +38,7 @@ public class TicketClient {
 				// don't care
 			}
 			boolean succeed = false;
-			while(!succeed) {
+			while (!succeed) {
 				try {
 					Socket server = getRandomServerPort(Symbols.serverList_Public);
 					server.setSoTimeout(Symbols.timeout);
