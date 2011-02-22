@@ -3,7 +3,7 @@ import java.util.List;
 
 public class Symbols {
 	final static int serverPort = 1234;
-	static final int timeout = 3000;
+	static final int timeout = 6000;
 	final static String ticketServer = "localhost";
 	static List<Integer> serverList_Public = new ArrayList<Integer>();
 	static List<Integer> serverList_Private = new ArrayList<Integer>();

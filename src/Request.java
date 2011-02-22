@@ -2,10 +2,15 @@
 public class Request implements Comparable<Request> {
 	int id_;
 	long clock_;
-	
+
 	public Request(int id, long clock) {
 		id_ = id;
 		clock_ = clock;
+	}
+
+	@Override
+	public String toString() {
+		return "processor: " + id_ + " clock: " + clock_;
 	}
 
 	@Override

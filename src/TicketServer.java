@@ -128,6 +128,7 @@ public class TicketServer {
 	}
 
 	private void releaseMutex(String command, String name) {
+		System.out.println("releasing mutex!");
 		List<Integer> temp = new ArrayList<Integer>();
 		for (int server : otherActiveServers) {
 			try {
@@ -149,39 +150,53 @@ public class TicketServer {
 			requests.remove();
 			requests.notifyAll();
 		}
+		System.out.println("released mutex!");
 	}
 
 	private void getMutex() {
+		System.out.println("getting mutex!");
 		List<Integer> temp = new ArrayList<Integer>();
+		List<Socket> socks = new ArrayList<Socket>();
+		synchronized (myClock) {
+			for (int server : otherActiveServers) {
+				try {
+					Socket s = new Socket(Symbols.ticketServer, server
+							+ Symbols.basePort_Private);
+					s.setSoTimeout(Symbols.timeout);
+					socks.add(s);
+					PrintWriter pout = new PrintWriter(s.getOutputStream());
+					pout.println("req " + myID + " " + myClock[myID]);
+					pout.flush();
+				} catch (IOException e) {
+					// Server is dead.
+					temp.add(server);
+				}
+			}
+		}
 		synchronized (requests) {
 			requests.add(new Request(myID, myClock[myID]));
 		}
-		for (int server : otherActiveServers) {
+		++myClock[myID];
+		int theirID = -1;
+		for (Socket s : socks) {
 			try {
-				Socket s = new Socket(Symbols.ticketServer, server
-						+ Symbols.basePort_Private);
-				s.setSoTimeout(Symbols.timeout);
-				PrintWriter pout = new PrintWriter(s.getOutputStream());
-				pout.println("req " + myID + " " + myClock[myID]);
-				pout.flush();
-				BufferedReader din = new BufferedReader(new InputStreamReader(
-						s.getInputStream()));
+				BufferedReader din = new BufferedReader(new InputStreamReader(s
+						.getInputStream()));
 				String ok = din.readLine();
 
 				StringTokenizer st = new StringTokenizer(ok);
 				String token = st.nextToken();
 				assert token.equals("ack");
-				int theirID = Integer.parseInt(st.nextToken());
+				theirID = Integer.parseInt(st.nextToken());
 				token = st.nextToken();
 				myClock[myID] = Math.max(myClock[myID], Long.parseLong(token)) + 1;
-				myClock[theirID] = Math.max(myClock[theirID],
-						Long.parseLong(token));
+				myClock[theirID] = Math.max(myClock[theirID], Long
+						.parseLong(token));
 			} catch (IOException e) {
 				// Server is dead.
-				temp.add(server);
+				temp.add(theirID);
 			}
 		}
-		++myClock[myID];
 		otherActiveServers.removeAll(temp);
 		synchronized (requests) {
 			while (requests.peek().id_ != myID) {
@@ -194,6 +209,7 @@ public class TicketServer {
 				}
 			}
 		}
+		System.out.println("got mutex!");
 	}
 
 	public class ServerHandlerRunner implements Runnable {
@@ -218,11 +234,12 @@ public class TicketServer {
 				String rmi = st.nextToken(); // req, rel, etc
 				int theirID = Integer.parseInt(st.nextToken());
 				long theirClock = Long.parseLong(st.nextToken()); // clock val
-
+				System.out.println(getline);
 				if (rmi.equals("req")) { // received a request
 					synchronized (requests) {
 						requests.add(new Request(theirID, theirClock));
 					}
+
 					pout.println("ack " + myID + " " + myClock[myID]);
 					pout.flush();
 				} else if (rmi.equals("rel")) { // received a release
@@ -257,8 +274,10 @@ public class TicketServer {
 						++sent;
 					}
 				}
-				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
-				myClock[theirID] = Math.max(myClock[theirID], theirClock);
+				synchronized (myClock) {
+					myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
+					myClock[theirID] = Math.max(myClock[theirID], theirClock);
+				}
 			} catch (Exception e) {
 				System.err.println(e);
 			}
