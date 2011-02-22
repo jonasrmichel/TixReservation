@@ -8,6 +8,10 @@ public class SeatTable {
 		return count;
 	}
 
+	public void setCount(int num) {
+		count = num;
+	}
+
 	/**
 	 *
 	 * @param name

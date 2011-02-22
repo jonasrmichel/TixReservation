@@ -11,7 +11,6 @@ import java.util.PriorityQueue;
 import java.util.StringTokenizer;
 
 public class TicketServer {
-	private static final int TIMEOUT_ = 3000;
 	SeatTable seatTable_;
 	static int myID;
 	volatile long[] myClock = new long[Symbols.maxServers];
@@ -54,7 +53,7 @@ public class TicketServer {
 				continue;
 			try {
 				Socket server = new Socket(Symbols.ticketServer, i);
-				server.setSoTimeout(TIMEOUT_);
+				server.setSoTimeout(Symbols.timeout);
 				PrintStream pout = new PrintStream(server.getOutputStream());
 				pout.println("hey " + myID + " " + 1);
 				pout.flush();
@@ -78,7 +77,7 @@ public class TicketServer {
 			try {
 				Socket firstguy = new Socket(Symbols.ticketServer,
 						otherActiveServers.get(0) + Symbols.basePort_Private);
-				firstguy.setSoTimeout(TIMEOUT_);
+				firstguy.setSoTimeout(Symbols.timeout);
 				PrintStream pout = new PrintStream(firstguy.getOutputStream());
 				pout.println("gst " + myID + " " + myClock[myID]);
 				pout.flush();
@@ -93,12 +92,15 @@ public class TicketServer {
 				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
 				myClock[theirID] = Math.max(myClock[theirID], theirClock);
 				int numInTable = Integer.parseInt(st.nextToken());
+				System.out.println("server " + theirID + " transfering " + numInTable); // **
+				seatTable_.setCount(numInTable);
 				for (int i = 0; i < numInTable; ++i) {
 					String seatEntry = br.readLine();
 					st = new StringTokenizer(seatEntry);
 					int seat = Integer.parseInt(st.nextToken());
 					String name = st.nextToken();
 					seatTable_.seats[seat] = name;
+					System.out.println(seat + ":" + name); // **
 				}
 			} catch (IOException ex) {
 				// This shouldn't happen?
@@ -133,7 +135,7 @@ public class TicketServer {
 			try {
 				Socket s = new Socket(Symbols.ticketServer, server
 						+ Symbols.basePort_Private);
-				s.setSoTimeout(TIMEOUT_);
+				s.setSoTimeout(Symbols.timeout);
 				PrintWriter pout = new PrintWriter(s.getOutputStream());
 				pout.println("rel " + myID + " " + myClock[myID] + " "
 						+ command + " " + name);
@@ -160,7 +162,7 @@ public class TicketServer {
 			try {
 				Socket s = new Socket(Symbols.ticketServer, server
 						+ Symbols.basePort_Private);
-				s.setSoTimeout(TIMEOUT_);
+				s.setSoTimeout(Symbols.timeout);
 				PrintWriter pout = new PrintWriter(s.getOutputStream());
 				pout.println("req " + myID + " " + myClock[myID]);
 				pout.flush();
@@ -244,6 +246,8 @@ public class TicketServer {
 					pout.println("ack " + myID + " " + myClock[myID]);
 					pout.flush();
 				} else if (rmi.equals("gst")) {
+					System.out.println("Sending: " + "rdy " + myID + " " + myClock[myID] + " "
+							+ seatTable_.getCount()); // **
 					pout.println("rdy " + myID + " " + myClock[myID] + " "
 							+ seatTable_.getCount());
 					pout.flush();
