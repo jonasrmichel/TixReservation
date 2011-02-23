@@ -14,7 +14,7 @@ public class TicketServer {
 	SeatTable seatTable_;
 	static int myID;
 	volatile long[] myClock = new long[Symbols.maxServers];
-	static List<Integer> otherActiveServers = new ArrayList<Integer>();
+	static List<Socket> otherActiveServers = new ArrayList<Socket>();
 	volatile PriorityQueue<Request> requests = new PriorityQueue<Request>(
 			Symbols.maxServers);
 
@@ -67,7 +67,7 @@ public class TicketServer {
 				int theirID = i - Symbols.basePort_Private;
 				myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
 				myClock[theirID] = Math.max(myClock[theirID], theirClock);
-				otherActiveServers.add(theirID);
+				otherActiveServers.add(server);
 			} catch (IOException ex) {
 				// Server is not up... ignore.
 			}
@@ -75,9 +75,7 @@ public class TicketServer {
 		if (!otherActiveServers.isEmpty()) {
 			getMutex();
 			try {
-				Socket firstguy = new Socket(Symbols.ticketServer,
-						otherActiveServers.get(0) + Symbols.basePort_Private);
-				firstguy.setSoTimeout(Symbols.timeout);
+				Socket firstguy = otherActiveServers.get(0);
 				PrintStream pout = new PrintStream(firstguy.getOutputStream());
 				pout.println("gst " + myID + " " + myClock[myID]);
 				pout.flush();
@@ -129,19 +127,16 @@ public class TicketServer {
 
 	private void releaseMutex(String command, String name) {
 		System.out.println("releasing mutex!");
-		List<Integer> temp = new ArrayList<Integer>();
-		for (int server : otherActiveServers) {
+		List<Socket> temp = new ArrayList<Socket>();
+		for (Socket s : otherActiveServers) {
 			try {
-				Socket s = new Socket(Symbols.ticketServer, server
-						+ Symbols.basePort_Private);
-				s.setSoTimeout(Symbols.timeout);
 				PrintWriter pout = new PrintWriter(s.getOutputStream());
 				pout.println("rel " + myID + " " + myClock[myID] + " "
 						+ command + " " + name);
 				pout.flush();
 			} catch (IOException e) {
 				// Server is dead.
-				temp.add(server);
+				temp.add(s);
 			}
 		}
 		otherActiveServers.removeAll(temp);
@@ -155,33 +150,28 @@ public class TicketServer {
 
 	private void getMutex() {
 		System.out.println("getting mutex!");
-		List<Integer> temp = new ArrayList<Integer>();
-		List<Socket> socks = new ArrayList<Socket>();
+		List<Socket> temp = new ArrayList<Socket>();
 		synchronized (myClock) {
-			for (int server : otherActiveServers) {
+			for (Socket s : otherActiveServers) {
 				try {
-					Socket s = new Socket(Symbols.ticketServer, server
-							+ Symbols.basePort_Private);
-					s.setSoTimeout(Symbols.timeout);
-					socks.add(s);
 					PrintWriter pout = new PrintWriter(s.getOutputStream());
 					pout.println("req " + myID + " " + myClock[myID]);
 					pout.flush();
 				} catch (IOException e) {
 					// Server is dead.
-					temp.add(server);
+					temp.add(s);
 				}
 			}
-		}
-		synchronized (requests) {
-			requests.add(new Request(myID, myClock[myID]));
+			synchronized (requests) {
+				requests.add(new Request(myID, myClock[myID]));
+			}
 		}
 		++myClock[myID];
 		int theirID = -1;
-		for (Socket s : socks) {
+		for (Socket s : otherActiveServers) {
 			try {
-				BufferedReader din = new BufferedReader(new InputStreamReader(s
-						.getInputStream()));
+				BufferedReader din = new BufferedReader(new InputStreamReader(
+						s.getInputStream()));
 				String ok = din.readLine();
 
 				StringTokenizer st = new StringTokenizer(ok);
@@ -190,11 +180,11 @@ public class TicketServer {
 				theirID = Integer.parseInt(st.nextToken());
 				token = st.nextToken();
 				myClock[myID] = Math.max(myClock[myID], Long.parseLong(token)) + 1;
-				myClock[theirID] = Math.max(myClock[theirID], Long
-						.parseLong(token));
+				myClock[theirID] = Math.max(myClock[theirID],
+						Long.parseLong(token));
 			} catch (IOException e) {
 				// Server is dead.
-				temp.add(theirID);
+				temp.add(s);
 			}
 		}
 		otherActiveServers.removeAll(temp);
@@ -257,7 +247,7 @@ public class TicketServer {
 						seatTable_.delete(name);
 					}
 				} else if (rmi.equals("hey")) { // new server
-					otherActiveServers.add(theirID);
+					otherActiveServers.add(clientSocket);
 					pout.println("ack " + myID + " " + myClock[myID]);
 					pout.flush();
 				} else if (rmi.equals("gst")) {
