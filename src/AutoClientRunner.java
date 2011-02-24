@@ -24,13 +24,13 @@ public class AutoClientRunner extends TicketClient implements Runnable {
 
 	Object lock = new Object();
 
-	String[] cmds = { "reserve yourmom", "search yourmom", "delete yourmom",
-			"reserve ALICE", "search ALICE", "delete ALICE", "reserve bob",
-			"search bob", "delete bob", "reserve charlie", "search charlie",
-			"delete charlie", "reserve randy", "search randy", "delete randy",
-			"reserve echo", "search echo", "delete echo", "reserve rm",
-			"search rm", "delete rm", "reserve sally", "search sally",
-			"delete sally" };
+	String[] cmds = { "reserve alfred", "search alfred", "delete alfred",
+			"reserve sharron", "search sharron", "delete sharron",
+			"reserve bob", "search bob", "delete bob", "reserve charlie",
+			"search charlie", "delete charlie", "reserve randy",
+			"search randy", "delete randy", "reserve echo", "search echo",
+			"delete echo", "reserve rm", "search rm", "delete rm",
+			"reserve sally", "search sally", "delete sally" };
 
 	@Override
 	public void run() {
@@ -54,13 +54,10 @@ public class AutoClientRunner extends TicketClient implements Runnable {
 						+ din.readLine());
 
 			} catch (SocketTimeoutException ex) {
-				// Blarg
 				ex.printStackTrace();
 			} catch (SocketException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}

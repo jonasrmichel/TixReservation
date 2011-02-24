@@ -1,8 +1,19 @@
 
 public class SeatTable {
 	final int maxSize = 100;
-	public String[] seats = new String[maxSize];
+	private String[] seats = new String[maxSize];
 	private int count = 0;
+
+	/**
+	 * accessors
+	 */
+	public String seatedAt(int i) {
+		return seats[i];
+	}
+
+	public void insert(int i, String name) {
+		seats[i] = name;
+	}
 
 	public int getCount() {
 		return count;

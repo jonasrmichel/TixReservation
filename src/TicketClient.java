@@ -26,11 +26,11 @@ public class TicketClient {
 	public static void main(String[] args) {
 		BufferedReader buf = new BufferedReader(
 				new InputStreamReader(System.in));
-		String line = null;
+		String line = "";
 		String response;
 		Symbols.initServerLists();
 
-		while (true) {
+		while (true && line != null) {
 			System.out.print("Command: ");
 			try {
 				line = buf.readLine();
@@ -38,7 +38,7 @@ public class TicketClient {
 				// don't care
 			}
 			boolean succeed = false;
-			while (!succeed) {
+			while (!succeed && line != null) {
 				try {
 					Socket server = getRandomServerPort(Symbols.serverList_Public);
 					server.setSoTimeout(Symbols.timeout);
@@ -49,7 +49,10 @@ public class TicketClient {
 					pout.println(line);
 					pout.flush();
 					response = din.readLine();
-					System.out.println("Result: " + response);
+					if (Integer.parseInt(response) == Symbols.invalid)
+						System.out.println("Unrecognized Command:" + line);
+					else
+						System.out.println("Result: " + response);
 					succeed = true;
 				} catch (Exception e) {
 					System.err.println("Client aborted: " + e);
