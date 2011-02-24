@@ -1,3 +1,15 @@
+/**
+ * Distributed Computing Spring '11 HW3 Project
+ *  https://github.com/jonasrmichel/TixReservation
+ * 
+ * @author Kyle Prete
+ * @date Feb 24, 2011
+ * 
+ * This file contains a custom Request object definition.
+ * We use this along with a priority queue to ensure the
+ * oldest request is the next to receive the mutex. A tie
+ * is broken by server id.
+ */
 
 public class Request implements Comparable<Request> {
 	int id_;

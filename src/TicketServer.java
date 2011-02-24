@@ -1,3 +1,41 @@
+/**
+ * Distributed Computing Spring '11 HW3 Project
+ *  https://github.com/jonasrmichel/TixReservation
+ *
+ * @author Kyle Prete and Jonas Michel
+ * @date Feb 24, 2011
+ *
+ * This file contains our ticket server that maintains mutual
+ * exclusion of a critical section (seat table) according to
+ * Lamport's Mutex Algorithm. The lifecycle of the server is
+ * as follows. main() creates a new TicketServer who first
+ * gets an unused port. Next it pings all other ports
+ * we've allowed searching for other servers. For all it finds,
+ * it creates a threads to handle the TCP connections from them.
+ * Next it asks one for the current seating chart. Finally, it
+ * spawns a thread to listen for client connections and loops
+ * to accept connections from new servers.
+ *
+ * Message types:
+ * hey - pings another server
+ * ack - acknowledges a ping or a request for the mutex
+ * req - requests the mutex
+ * rel - releases the mutex
+ * gst - (get seat table) requests the current seating table
+ * rdy - announces the beginning of the seat table transfer
+ *
+ * So each ServerHandlerRunner persists connections between
+ * servers to ensure FIFO. If it times out once, it sends a
+ * new hey to ping the other server and make sure it lives.
+ * If it times out again without hearing back, it assumes the
+ * server is dead and allows the connection and the thread to
+ * die.
+ *
+ * NOTE: Servers must initially be brought online incrementally,
+ * allowing enough time for each successive server to test ports
+ * and synchronize before adding the next.
+ */
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -146,41 +184,6 @@ public class TicketServer {
 	}
 
 	/**
-	 * Lamport: Mutex Release. Notifies all other servers of critical section
-	 * release and of the seat table modification made. Removes the request from
-	 * the requests queue.
-	 *
-	 * @param command
-	 * @param name
-	 */
-	private void releaseMutex(String command, String name) {
-		System.out.println("releasing mutex!");
-		// send a release to all other servers
-		for (int i = 0; i < connections.length; ++i) {
-			Socket s = connections[i];
-			if (s == null) {
-				continue;
-			}
-			try {
-				PrintWriter pout = new PrintWriter(s.getOutputStream());
-				pout.println("rel " + myID + " " + myClock[myID] + " "
-						+ command + " " + name);
-				pout.flush();
-			} catch (IOException e) {
-				// Server is dead.
-				connections[i] = null;
-			}
-		}
-		++myClock[myID];
-		// remove myself from the requests queue
-		synchronized (requests) {
-			requests.remove();
-			requests.notifyAll();
-		}
-		System.out.println("released mutex!");
-	}
-
-	/**
 	 * Lamport: Request Mutex. Sends a request for the critical section to all
 	 * other servers. Inserts a request into the request queue. Waits until
 	 * access to the critical section is obtained.
@@ -241,6 +244,41 @@ public class TicketServer {
 				return true;
 		}
 		return false;
+	}
+
+	/**
+	 * Lamport: Mutex Release. Notifies all other servers of critical section
+	 * release and of the seat table modification made. Removes the request from
+	 * the requests queue.
+	 *
+	 * @param command
+	 * @param name
+	 */
+	private void releaseMutex(String command, String name) {
+		System.out.println("releasing mutex!");
+		// send a release to all other servers
+		for (int i = 0; i < connections.length; ++i) {
+			Socket s = connections[i];
+			if (s == null) {
+				continue;
+			}
+			try {
+				PrintWriter pout = new PrintWriter(s.getOutputStream());
+				pout.println("rel " + myID + " " + myClock[myID] + " "
+						+ command + " " + name);
+				pout.flush();
+			} catch (IOException e) {
+				// Server is dead.
+				connections[i] = null;
+			}
+		}
+		++myClock[myID];
+		// remove myself from the requests queue
+		synchronized (requests) {
+			requests.remove();
+			requests.notifyAll();
+		}
+		System.out.println("released mutex!");
 	}
 
 	/**
@@ -396,11 +434,9 @@ public class TicketServer {
 					String getline = din.readLine();
 					StringTokenizer st = new StringTokenizer(getline);
 
-					int index = Symbols.invalid;
-
-					// error handling
+					// request format error handling
 					if (st.countTokens() != 2) {
-						pout.println(index);
+						pout.println("unrecognized command '" + getline + "'");
 						pout.flush();
 						continue;
 					}
@@ -410,6 +446,7 @@ public class TicketServer {
 
 					System.out.println("ClientRequest: " + rmi + " " + name);
 
+					int index = Symbols.invalid;
 					if (rmi.equals("reserve")) {
 						getMutex();
 						index = seatTable_.reserve(name);
@@ -417,9 +454,21 @@ public class TicketServer {
 							releaseMutex("null", "null");
 						else
 							releaseMutex("res", name);
+						if (index == -2)
+							pout.println("All seats are taken!");
+						else if (index == -1)
+							pout.println(name + " already has a seat");
+						else
+							pout.println(name + " has been assigned seat "
+									+ index);
 					} else if (rmi.equals("search")) {
 						// don't need mutex to read
 						index = seatTable_.search(name);
+						if (index == -1)
+							pout.println(name + " does not have a seat");
+						else
+							pout.println(name + " has been assigned seat "
+									+ index);
 					} else if (rmi.equals("delete")) {
 						getMutex();
 						index = seatTable_.delete(name);
@@ -427,8 +476,14 @@ public class TicketServer {
 							releaseMutex("null", "null");
 						else
 							releaseMutex("del", name);
+						if (index == -1)
+							pout.println(name + " did not have a seat");
+						else
+							pout.println(name + " has been removed from seat "
+									+ index);
+					} else {
+						pout.println("unrecognized command '" + getline + "'");
 					}
-					pout.println(index);
 					pout.flush();
 				}
 			} catch (Exception e) {

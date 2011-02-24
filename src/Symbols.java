@@ -1,8 +1,18 @@
+/**
+ * Distributed Computing Spring '11 HW3 Project
+ *  https://github.com/jonasrmichel/TixReservation
+ *
+ * @author Jonas Michel
+ * @date Feb 24, 2011
+ *
+ * This file contains constants and global variables.
+ */
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class Symbols {
-	final static int maxServers = 5;
+	final static int maxServers = 10;
 	final static int maxTestClients = 25;
 	static final int timeout = 3000;
 	final static String ticketServer = "localhost";

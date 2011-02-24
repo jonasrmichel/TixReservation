@@ -1,3 +1,16 @@
+/**
+ * Distributed Computing Spring '11 HW3 Project
+ *  https://github.com/jonasrmichel/TixReservation
+ * 
+ * @author Kyle Prete
+ * @date Feb 24, 2011
+ * 
+ * This file contains our automatic ticket client. It spawns
+ * a number of threads (generally more than the number of
+ * servers), which begin sending random commands to random 
+ * servers. We use this class for testing purposes.
+ */
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
