@@ -1,3 +1,16 @@
+/**
+ * Distributed Computing Spring '11 HW3 Project
+ *  https://github.com/jonasrmichel/TixReservation
+ * 
+ * @author Jonas Michel
+ * @date Feb 24, 2011
+ * 
+ * This file contains our interactive ticket client. A user
+ * can pass commands to a random server to reserve, delete,
+ * or search for a name.
+ */
+
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;

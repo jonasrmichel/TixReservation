@@ -1,3 +1,13 @@
+/**
+ * Distributed Computing Spring '11 HW3 Project
+ *  https://github.com/jonasrmichel/TixReservation
+ * 
+ * @author Jonas Michel
+ * @date Feb 24, 2011
+ * 
+ * This file contains constants and global variables.
+ */
+
 import java.util.ArrayList;
 import java.util.List;
 

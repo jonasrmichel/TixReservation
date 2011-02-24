@@ -1,3 +1,14 @@
+/**
+ * Distributed Computing Spring '11 HW3 Project
+ *  https://github.com/jonasrmichel/TixReservation
+ * 
+ * @author Jonas Michel
+ * @date Feb 24, 2011
+ * 
+ * This file holds the seating chart. It is shared among the
+ * threads of a particular server, but each server has its
+ * own instance.
+ */
 
 public class SeatTable {
 	final int maxSize = 100;

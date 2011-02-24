@@ -1,3 +1,35 @@
+/**
+ * Distributed Computing Spring '11 HW3 Project
+ *  https://github.com/jonasrmichel/TixReservation
+ * 
+ * @author Jonas Michel
+ * @date Feb 24, 2011
+ * 
+ * This file contains our ticket server. The lifecycle of
+ * the server is as follows. main() creates a new TicketServer
+ * who first gets an unused port. Next it pings all other ports
+ * we've allowed searching for other servers. For all it finds,
+ * it creates a threads to handle the TCP connections from them.
+ * Next it asks one for the current seating chart. Finally, it
+ * spawns a thread to listen for client connections and loops
+ * to accept connections from new servers.
+ * 
+ * Message types:
+ * hey - pings another server
+ * ack - acknowledges a ping or a request for the mutex
+ * req - requests the mutex
+ * rel - releases the mutex
+ * gst - (get seat table) requests the current seating table
+ * rdy - announces the beginning of the seat table transfer
+ * 
+ * So each ServerHandlerRunner persists connections between
+ * servers to ensure FIFO. If it times out once, it sends a
+ * new hey to ping the other server and make sure it lives.
+ * If it times out again without hearing back, it assumes the 
+ * server is dead and allows the connection and the thread to
+ * die.
+ */
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
