@@ -350,17 +350,30 @@ public class TicketServer {
 							releaseMutex("null", "null"); // **
 						else
 							releaseMutex("res", name);
+						if (index == -2) 
+							pout.println("All seats are taken!");
+						else if (index == -1)
+							pout.println(name + " already has a seat");
+						else
+							pout.println(name + " has been assigned seat " + index);
 					} else if (rmi.equals("search")) {
 						index = seatTable_.search(name);
+						if (index == -1)
+							pout.println(name + " does not have a seat");
+						else
+							pout.println(name + " has been assigned seat " + index);
 					} else if (rmi.equals("delete")) {
 						getMutex();
 						index = seatTable_.delete(name);
 						if (index < 0)
-							releaseMutex("null", "null"); // **
+							releaseMutex("null", "null");
 						else
-							releaseMutex("del", name); // **
+							releaseMutex("del", name);
+						if (index == -1)
+							pout.println(name + " did not have a seat");
+						else
+							pout.println(name + " has been removed from seat " + index);
 					}
-					pout.println(index);
 					pout.flush();
 				}
 			} catch (Exception e) {
