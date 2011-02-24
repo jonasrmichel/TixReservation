@@ -90,6 +90,7 @@ public class TicketServer {
 			try {
 				Socket firstguy = connections[firstServerWeFind];
 				PrintWriter pout = new PrintWriter(firstguy.getOutputStream());
+				getMutex();
 				pout.println("gst " + myID + " " + myClock[myID]);
 				pout.flush();
 			} catch (IOException ex) {
@@ -155,7 +156,7 @@ public class TicketServer {
 					System.out.println("sending:" + "req " + myID + " "
 							+ myClock[myID]);
 					pout.println("req " + myID + " " + myClock[myID]); // ** not
-																		// received
+					// received
 					pout.flush();
 				} catch (IOException e) {
 					// Server is dead.
@@ -166,8 +167,9 @@ public class TicketServer {
 				System.out.println("adding myself to requests");
 				requests.add(new Request(myID, myClock[myID]));
 			}
+			++myClock[myID];
 		}
-		++myClock[myID];
+
 
 		synchronized (requests) {
 			while (notMutex()) {
@@ -204,15 +206,22 @@ public class TicketServer {
 		BufferedReader din;
 		PrintWriter pout;
 		int theirID;
+		boolean hasFailed = false;
 
 		@Override
 		public void run() {
-			try {
-				din = new BufferedReader(new InputStreamReader(
-						clientSocket.getInputStream()));
-				pout = new PrintWriter(clientSocket.getOutputStream());
-				while (true) {
 
+			try {
+				din = new BufferedReader(new InputStreamReader(clientSocket
+						.getInputStream()));
+				pout = new PrintWriter(clientSocket.getOutputStream());
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				assert (false);
+			}
+
+			while (true) {
+				try {
 					String getline = din.readLine();
 					System.out.println(myClock[myID] + ": " + getline);
 					StringTokenizer st = new StringTokenizer(getline);
@@ -220,7 +229,13 @@ public class TicketServer {
 					String rmi = st.nextToken(); // req, rel, etc
 					int theirID = Integer.parseInt(st.nextToken());
 					long theirClock = Long.parseLong(st.nextToken()); // clock
-																		// val
+					// val
+
+					synchronized (myClock) {
+						myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
+						myClock[theirID] = Math.max(myClock[theirID],
+								theirClock);
+					}
 
 					if (rmi.equals("req")) { // received a request
 						synchronized (requests) {
@@ -271,19 +286,27 @@ public class TicketServer {
 							String name = st.nextToken();
 							seatTable_.seats[seat] = name;
 						}
+						releaseMutex("null", "null");
+					} else if (rmi.equals("ack")) {
+						synchronized (requests) {
+							requests.notifyAll();
+						}
 					}
-					synchronized (myClock) {
-						myClock[myID] = Math.max(myClock[myID], theirClock) + 1;
-						myClock[theirID] = Math.max(myClock[theirID],
-								theirClock);
-					}
-				}
-			} catch (IOException e) {
-				// Server died?
-				System.err.println(e);
 
-				connections[theirID] = null;
-				// Let this thread die.
+					hasFailed = false;
+				} catch (IOException e) {
+					// Server died?
+					if(hasFailed) {
+						// Let this thread die.
+						//System.err.println(e);
+						connections[theirID] = null;
+						return;
+					}
+
+					hasFailed = true;
+					pout.println("hey " + myID + " " + myClock[myID]);
+					pout.flush();
+				}
 			}
 		}
 	}
@@ -303,10 +326,16 @@ public class TicketServer {
 					Socket clientSocket = serverSocket_.accept();
 					BufferedReader din = new BufferedReader(
 							new InputStreamReader(clientSocket.getInputStream()));
-					PrintWriter pout = new PrintWriter(
-							clientSocket.getOutputStream());
+					PrintWriter pout = new PrintWriter(clientSocket
+							.getOutputStream());
 					String getline = din.readLine();
 					StringTokenizer st = new StringTokenizer(getline);
+
+					if (st.countTokens() != 2) {
+						pout.println("Unrecognized command:" + getline);
+						pout.flush();
+						continue;
+					}
 
 					String rmi = st.nextToken();
 					String name = st.nextToken();

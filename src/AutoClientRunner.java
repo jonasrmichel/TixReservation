@@ -10,7 +10,7 @@ public class AutoClientRunner extends TicketClient implements Runnable {
 	public static void main(String[] args) {
 		Symbols.initServerLists();
 
-		for (int i = 10; i > 0; --i) {
+		for (int i = Symbols.maxTestClients; i > 0; --i) {
 			new Thread(new AutoClientRunner(i)).start();
 		}
 
@@ -27,7 +27,10 @@ public class AutoClientRunner extends TicketClient implements Runnable {
 	String[] cmds = { "reserve yourmom", "search yourmom", "delete yourmom",
 			"reserve ALICE", "search ALICE", "delete ALICE", "reserve bob",
 			"search bob", "delete bob", "reserve charlie", "search charlie",
-			"delete charlie" };
+			"delete charlie", "reserve randy", "search randy", "delete randy",
+			"reserve echo", "search echo", "delete echo", "reserve rm",
+			"search rm", "delete rm", "reserve sally", "search sally",
+			"delete sally" };
 
 	@Override
 	public void run() {
@@ -38,8 +41,8 @@ public class AutoClientRunner extends TicketClient implements Runnable {
 				clientSocket.setSoTimeout(Symbols.timeout);
 				BufferedReader din = new BufferedReader(new InputStreamReader(
 						clientSocket.getInputStream()));
-				PrintWriter pout = new PrintWriter(
-						clientSocket.getOutputStream());
+				PrintWriter pout = new PrintWriter(clientSocket
+						.getOutputStream());
 				String next = cmds[randy.nextInt(cmds.length)];
 				synchronized (lock) {
 					System.out.println(ident + " trying " + next);

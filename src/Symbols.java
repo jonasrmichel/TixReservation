@@ -2,14 +2,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Symbols {
-	final static int serverPort = 1234;
-	static final int timeout = 3000;
+	final static int maxTestClients = 25;
+	static final int timeout = 2000;
 	final static String ticketServer = "localhost";
 	static List<Integer> serverList_Public = new ArrayList<Integer>();
 	static List<Integer> serverList_Private = new ArrayList<Integer>();
 	final static int basePort_Public = 1234;
 	final static int basePort_Private = 2234;
-	final static int maxServers = 5;
+	final static int maxServers = 10;
 
 	static void initServerLists() {
 		if (serverList_Private.isEmpty()) {

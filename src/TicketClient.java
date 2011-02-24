@@ -49,8 +49,6 @@ public class TicketClient {
 					pout.println(line);
 					pout.flush();
 					response = din.readLine();
-					if (Integer.parseInt(response) == -3)
-						response = "unrecognized command '" + line + "'";
 					System.out.println("Result: " + response);
 					succeed = true;
 				} catch (Exception e) {
